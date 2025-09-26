@@ -1,50 +1,3 @@
-<!--
-<!DOCTYPE html>
-<html lang="ko">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{ content.title }}</title>
-    <style>
-        body { font-family: Arial, sans-serif; margin: 20px; background-color: #f4f4f4; }
-        .container { max-width: 900px; margin: 40px auto; padding: 30px; border: 1px solid #ddd; border-radius: 8px; background-color: #fff; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
-        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
-        .logout-link { font-size: 0.9em; text-align: right; }
-        .content-header { border-bottom: 1px solid #eee; padding-bottom: 15px; margin-bottom: 20px; }
-        .content-header h1 { margin-top: 0; color: #007bff; }
-        .content-meta { font-size: 0.9em; color: #777; }
-        .content-body { line-height: 1.7; white-space: pre-wrap; /* 줄바꿈과 공백 유지를 위함 */ }
-        .back-link { display: inline-block; margin-top: 30px; color: #007bff; text-decoration: none; font-weight: bold;}
-    </style>
-</head>
-<body>
-    <div class="container">
-        <div class="header">
-            <h2>콘텐츠 상세 보기</h2>
-            <div class="logout-link">
-                <p>환영합니다, {{ username }}님! | <a href="/">메인으로</a> | <a href="/logout">로그아웃</a></p>
-            </div>
-        </div>
-
-        {% if content %}
-            <div class="content-header">
-                <h1>{{ content.title }}</h1>
-                <p class="content-meta">
-                    과목: {{ content.subject_name }} | 타입: {{ content.content_type }} | 작성일: {{ content.created_at.strftime('%Y-%m-%d') }}
-                </p>
-            </div>
-            <div class="content-body">
-                {{ content.body }}
-            </div>
-            <a href="{{ url_for('subject_detail', subject_id=content.subject_id) }}" class="back-link">&larr; {{ content.subject_name }} 목록으로 돌아가기</a>
-        {% else %}
-            <p class="message error">콘텐츠를 찾을 수 없습니다.</p>
-            <a href="{{ url_for('study_list') }}" class="back-link">&larr; 전체 과목 목록으로 돌아가기</a>
-        {% endif %}
-    </div>
-</body>
-</html>
--->
 {% extends "base.html" %}
 
 {% block title %}{{ content.title if content else '콘텐츠 보기' }}{% endblock %}
@@ -92,11 +45,11 @@
         <p class="content-meta">
             <strong>과목:</strong> {{ content.subject_name }} | <strong>타입:</strong> {{ content.content_type }} | <strong>작성일:</strong> {{ content.created_at.strftime('%Y-%m-%d') }}
         </p>
-        
+
         <div class="content-body">
-            {{ content.body }}
+            {{ content.body | safe }}
         </div>
-        
+
         <a href="{{ url_for('subject_detail', subject_id=content.subject_id) }}" class="back-link">↩ {{ content.subject_name }} 목록으로 돌아가기</a>
     {% else %}
         <p class="message error">콘텐츠를 찾을 수 없습니다.</p>

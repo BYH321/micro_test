@@ -1161,16 +1161,15 @@ def add_content():
     try:
         conn = get_db_connection()
         with conn.cursor() as cursor:
-            # POST 요청 처리
             if request.method == 'POST':
-                subject_id = request.form['subject_id']
-                content_type = request.form['content_type']
-                title = request.form['title'].strip()
-                body = request.form['body'].strip()
+                subject_id = request.form.get('subject_id')
+                content_type = request.form.get('content_type')
+                title = request.form.get('title', '').strip()
+                body = request.form.get('body', '').strip()
 
                 if not all([subject_id, content_type, title, body]):
                     flash('모든 필드를 채워주세요.', 'error')
-                    # ★★★ 수정된 부분: 오류 발생 시에도 subjects를 다시 불러와 템플릿 렌더링 ★★★
+                    # 오류 발생 시에도 과목 목록을 다시 불러와 템플릿 렌더링
                     cursor.execute("SELECT id, name FROM subjects ORDER BY name ASC")
                     subjects = cursor.fetchall()
                     return render_template('add_content.html', subjects=subjects)
@@ -1179,7 +1178,7 @@ def add_content():
                 cursor.execute(sql, (subject_id, content_type, title, body))
                 conn.commit()
                 flash('새로운 콘텐츠가 성공적으로 등록되었습니다.', 'success')
-                return redirect(url_for('admin_dashboard'))
+                return redirect(url_for('manage_content'))
 
             # GET 요청 처리
             cursor.execute("SELECT id, name FROM subjects ORDER BY name ASC")

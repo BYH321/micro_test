@@ -6,6 +6,8 @@ from dotenv import load_dotenv, find_dotenv
 from flask import Flask, render_template, request, redirect, url_for, session, flash
 from werkzeug.security import generate_password_hash, check_password_hash
 import pymysql.cursors
+import uuid
+from werkzeug.utils import secure_filename
 
 dotenv_path = find_dotenv('/var/www/html/your_flask_app/.env')
 if os.path.exists(dotenv_path):
@@ -107,6 +109,40 @@ def register():
     return redirect(url_for('index'))
 
 # 관리자 학습 컨텐츠 관리
+@app.route('/admin/upload_image', methods=['POST'])
+def upload_image():
+    """Summernote 에디터에서 이미지 업로드를 처리합니다."""
+    if not is_admin():
+        return jsonify({'error': '권한이 없습니다.'}), 403
+
+    if 'file' not in request.files:
+        return jsonify({'error': '파일이 없습니다.'}), 400
+
+    file = request.files['file']
+    if file.filename == '':
+        return jsonify({'error': '파일이 선택되지 않았습니다.'}), 400
+
+    if file:
+        filename = secure_filename(file.filename)
+        extension = filename.rsplit('.', 1)[1].lower()
+        unique_filename = f"{uuid.uuid4()}.{extension}"
+
+        allowed_extensions = {'png', 'jpg', 'jpeg', 'gif'}
+        if extension not in allowed_extensions:
+            return jsonify({'error': '허용되지 않는 파일 형식입니다.'}), 400
+
+        save_path = os.path.join(app.root_path, 'static/uploads', unique_filename)
+
+        try:
+            file.save(save_path)
+            url = url_for('static', filename=f'uploads/{unique_filename}')
+            return jsonify({'url': url})
+        except Exception as e:
+            app.logger.error(f"Image save failed: {e}", exc_info=True)
+            return jsonify({'error': '파일 저장 중 서버 오류가 발생했습니다.'}), 500
+
+    return jsonify({'error': '알 수 없는 오류가 발생했습니다.'}), 500
+
 @app.route('/admin/content')
 def manage_content():
     """전체 학습 콘텐츠 목록을 보여주는 관리 페이지"""

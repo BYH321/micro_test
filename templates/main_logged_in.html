@@ -1,54 +1,60 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>메인 페이지</title>
-    <style>
-        body { font-family: Arial, sans-serif; margin: 20px; background-color: #f4f4f4; }
-        .container { max-width: 600px; margin: 40px auto; padding: 30px; border: 1px solid #ddd; border-radius: 8px; background-color: #fff; box-shadow: 0 2px 4px rgba(0,0,0,0.1); text-align: center;}
-        h1 { color: #333; margin-bottom: 30px; }
-        .feature-links a {
-            display: block; /* 블록 요소로 만들어서 한 줄에 하나씩 표시 */
-            width: 80%; /* 컨테이너의 80% 너비 */
-            margin: 15px auto; /* 중앙 정렬 및 상하 여백 */
-            padding: 15px 20px;
-            background-color: #007bff;
-            color: white;
-            text-decoration: none;
-            border-radius: 5px;
-            font-size: 1.2em;
-            transition: background-color 0.3s ease;
-        }
-        .feature-links a:hover {
-            background-color: #0056b3;
-        }
-        .logout-link { margin-top: 30px; }
-        .logout-link a {
-            color: #dc3545;
-            text-decoration: none;
-            font-weight: bold;
-        }
-        .logout-link a:hover {
-            text-decoration: underline;
-        }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <h1>환영합니다, {{ username }}님!</h1>
-        <p>무엇을 도와드릴까요?</p>
+{% extends "base.html" %}
 
-        <div class="feature-links">
-            <a href="/diary">일기쓰기</a>
-            <a href="/board">게시판 가기</a>
-            <a href="/todos">To-Do List</a> {# To-Do List 링크 추가 #}
-        </div>
+{% block title %}대시보드{% endblock %}
+{% block header_title %}환영합니다, {{ session.username }}님!{% endblock %}
 
-        <div class="logout-link">
-            <a href="/logout">로그아웃</a>
-        </div>
-    </div>
-</body>
-</html>
+{% block content %}
+<style>
+    /* 이 페이지에서만 사용하는 스타일 */
+    .welcome-message {
+        text-align: center;
+        margin-bottom: 2.5rem; /* 아래 메뉴와의 간격 추가 */
+    }
+    /* ★★★ 수정된 부분 ★★★ */
+    .welcome-message p {
+        font-size: 1.2em;
+        color: #495057;
+        padding-bottom: 0.75rem;
+        display: inline-block; /* border-bottom 길이를 텍스트에 맞춤 */
+        border-bottom: 2px solid #007bff; /* 파란색 밑줄 효과 */
+    }
+    .feature-links {
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+    }
+    .feature-links a {
+        display: block;
+        padding: 1rem;
+        text-decoration: none;
+        color: white;
+        background-color: #007bff;
+        border-radius: 8px;
+        font-size: 1.2em;
+        font-weight: 500;
+        text-align: center;
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+    .feature-links a:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    }
+    .feature-links a.admin-link {
+        background-color: #dc3545;
+    }
+</style>
 
+<div class="welcome-message">
+    <p>🚀 무엇을 도와드릴까요?</p>
+</div>
+
+<div class="feature-links">
+    <a href="{{ url_for('diary_calendar') }}">일기쓰기</a>
+    <a href="{{ url_for('board_list') }}">게시판 가기</a>
+    <a href="{{ url_for('todos_list') }}">To-Do List</a>
+    <a href="{{ url_for('study_list') }}">학습 과목</a>
+    {% if session.username in ['kevin', 'kwangjin'] %}
+        <a href="{{ url_for('admin_dashboard') }}" class="admin-link">👑 관리자 페이지</a>
+    {% endif %}
+</div>
+{% endblock %}

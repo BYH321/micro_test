@@ -1,3 +1,4 @@
+<!--
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -44,3 +45,78 @@
     </div>
 </body>
 </html>
+-->
+{% extends "base.html" %}
+
+{% block title %}새 글 작성{% endblock %}
+{% block header_title %}새 글 작성{% endblock %}
+
+{% block content %}
+<style>
+    /* 이 페이지에서만 사용하는 스타일 */
+    .write-form label {
+        display: block;
+        margin-bottom: 8px;
+        font-weight: 600;
+        color: #495057;
+    }
+    .write-form input[type="text"],
+    .write-form textarea {
+        width: 100%;
+        padding: 12px;
+        margin-bottom: 1.5rem;
+        border: 1px solid #ced4da;
+        border-radius: 4px;
+        box-sizing: border-box;
+        font-size: 1em;
+        transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+    }
+    .write-form input[type="text"]:focus,
+    .write-form textarea:focus {
+        border-color: #80bdff;
+        outline: 0;
+        box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+    }
+    .write-form textarea {
+        min-height: 300px;
+        resize: vertical;
+        line-height: 1.6;
+    }
+    .form-actions {
+        display: flex;
+        justify-content: flex-end; /* 버튼을 오른쪽으로 정렬 */
+        gap: 10px; /* 버튼 사이 간격 */
+        margin-top: 1rem;
+    }
+    .form-actions button,
+    .form-actions a {
+        padding: 10px 20px;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+        text-decoration: none;
+        color: white;
+        font-weight: 500;
+        font-size: 0.95em;
+    }
+    .btn-submit { background-color: #28a745; }
+    .btn-submit:hover { background-color: #218838; }
+    .btn-cancel { background-color: #6c757d; }
+    .btn-cancel:hover { background-color: #5a6268; }
+</style>
+
+<form class="write-form" method="post" action="{{ url_for('write_post') }}">
+    <div>
+        <label for="title">제목</label>
+        <input type="text" id="title" name="title" required>
+    </div>
+    <div>
+        <label for="content">내용</label>
+        <textarea id="content" name="content" required></textarea>
+    </div>
+    <div class="form-actions">
+        <a href="{{ url_for('board_list') }}" class="btn-cancel">취소</a>
+        <button type="submit" class="btn-submit">작성 완료</button>
+    </div>
+</form>
+{% endblock %}

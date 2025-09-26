@@ -184,6 +184,18 @@ def edit_content(content_id):
     try:
         conn = get_db_connection()
         with conn.cursor() as cursor:
+            # 수정할 콘텐츠 정보를 먼저 불러옵니다 (GET, POST 공통)
+            cursor.execute("SELECT * FROM contents WHERE id = %s", (content_id,))
+            content = cursor.fetchone()
+            if not content:
+                flash('존재하지 않는 콘텐츠입니다.', 'error')
+                return redirect(url_for('manage_content'))
+
+            # 과목 목록도 미리 불러옵니다 (GET, POST 공통)
+            cursor.execute("SELECT id, name FROM subjects ORDER BY name ASC")
+            subjects = cursor.fetchall()
+
+            # POST 요청 처리
             if request.method == 'POST':
                 subject_id = request.form['subject_id']
                 content_type = request.form['content_type']
@@ -192,21 +204,16 @@ def edit_content(content_id):
 
                 if not all([subject_id, content_type, title, body]):
                     flash('모든 필드를 채워주세요.', 'error')
-                else:
-                    sql = "UPDATE contents SET subject_id=%s, content_type=%s, title=%s, body=%s WHERE id=%s"
-                    cursor.execute(sql, (subject_id, content_type, title, body, content_id))
-                    conn.commit()
-                    flash('콘텐츠가 성공적으로 수정되었습니다.', 'success')
-                    return redirect(url_for('manage_content'))
+                    # content와 subjects 변수를 포함하여 다시 렌더링
+                    return render_template('edit_content.html', content=content, subjects=subjects)
 
-            cursor.execute("SELECT * FROM contents WHERE id = %s", (content_id,))
-            content = cursor.fetchone()
-            if not content:
-                flash('존재하지 않는 콘텐츠입니다.', 'error')
+                sql = "UPDATE contents SET subject_id=%s, content_type=%s, title=%s, body=%s WHERE id=%s"
+                cursor.execute(sql, (subject_id, content_type, title, body, content_id))
+                conn.commit()
+                flash('콘텐츠가 성공적으로 수정되었습니다.', 'success')
                 return redirect(url_for('manage_content'))
 
-            cursor.execute("SELECT id, name FROM subjects ORDER BY name ASC")
-            subjects = cursor.fetchall()
+            # GET 요청 처리
             return render_template('edit_content.html', content=content, subjects=subjects)
 
     except Exception as e:

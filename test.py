@@ -1,0 +1,1 @@
+git config advice.diverging false

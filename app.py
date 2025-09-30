@@ -175,7 +175,7 @@ def manage_content():
 
 @app.route('/admin/edit_content/<int:content_id>', methods=['GET', 'POST'])
 def edit_content(content_id):
-    """기존 학습 콘텐츠를 수정하는 페이지"""
+    """기존 학습 콘텐츠를 수정하는 페이지 (PDF 업로드 기능 추가)"""
     if not is_admin():
         flash('접근 권한이 없습니다.', 'error')
         return redirect(url_for('index'))
@@ -184,36 +184,54 @@ def edit_content(content_id):
     try:
         conn = get_db_connection()
         with conn.cursor() as cursor:
-            # 수정할 콘텐츠 정보를 먼저 불러옵니다 (GET, POST 공통)
-            cursor.execute("SELECT * FROM contents WHERE id = %s", (content_id,))
-            content = cursor.fetchone()
-            if not content:
-                flash('존재하지 않는 콘텐츠입니다.', 'error')
-                return redirect(url_for('manage_content'))
-
-            # 과목 목록도 미리 불러옵니다 (GET, POST 공통)
-            cursor.execute("SELECT id, name FROM subjects ORDER BY name ASC")
-            subjects = cursor.fetchall()
-
-            # POST 요청 처리
             if request.method == 'POST':
-                subject_id = request.form['subject_id']
-                content_type = request.form['content_type']
-                title = request.form['title'].strip()
-                body = request.form['body'].strip()
+                storage_type = request.form.get('storage_type')
+                subject_id = request.form.get('subject_id')
+                content_type = request.form.get('content_type')
+                title = request.form.get('title', '').strip()
 
-                if not all([subject_id, content_type, title, body]):
-                    flash('모든 필드를 채워주세요.', 'error')
-                    # content와 subjects 변수를 포함하여 다시 렌더링
-                    return render_template('edit_content.html', content=content, subjects=subjects)
+                body = None
+                pdf_path = None
 
-                sql = "UPDATE contents SET subject_id=%s, content_type=%s, title=%s, body=%s WHERE id=%s"
-                cursor.execute(sql, (subject_id, content_type, title, body, content_id))
+                if storage_type == 'editor':
+                    body = request.form.get('body', '').strip()
+                    sql = "UPDATE contents SET subject_id=%s, content_type=%s, storage_type=%s, title=%s, body=%s, pdf_path=NULL WHERE id=%s"
+                    cursor.execute(sql, (subject_id, content_type, storage_type, title, body, content_id))
+
+                elif storage_type == 'pdf':
+                    # 새 PDF 파일이 업로드되었는지 확인
+                    if 'pdf_file' in request.files and request.files['pdf_file'].filename != '':
+                        file = request.files['pdf_file']
+                        if file and allowed_pdf_file(file.filename):
+                            # 기존 파일 삭제 로직 (선택 사항)
+                            # cursor.execute("SELECT pdf_path FROM contents WHERE id=%s", (content_id,))
+                            # old_file = cursor.fetchone()
+                            # if old_file and old_file['pdf_path']:
+                            #     os.remove(os.path.join(app.root_path, 'static', old_file['pdf_path']))
+
+                            filename = secure_filename(file.filename)
+                            unique_filename = f"{uuid.uuid4()}_{filename}"
+                            save_path = os.path.join(app.root_path, 'static/pdfs', unique_filename)
+                            file.save(save_path)
+                            pdf_path = f"pdfs/{unique_filename}"
+                            sql = "UPDATE contents SET subject_id=%s, content_type=%s, storage_type=%s, title=%s, body=NULL, pdf_path=%s WHERE id=%s"
+                            cursor.execute(sql, (subject_id, content_type, storage_type, title, pdf_path, content_id))
+                        else:
+                            flash('PDF 파일만 업로드할 수 있습니다.', 'error')
+                            # 오류 시 페이지를 다시 로드하기 위해 아래 GET 로직으로 넘어감
+                    else: # 새 PDF 파일이 없으면 기존 정보만 업데이트
+                        sql = "UPDATE contents SET subject_id=%s, content_type=%s, storage_type=%s, title=%s WHERE id=%s"
+                        cursor.execute(sql, (subject_id, content_type, storage_type, title, content_id))
+
                 conn.commit()
                 flash('콘텐츠가 성공적으로 수정되었습니다.', 'success')
                 return redirect(url_for('manage_content'))
 
             # GET 요청 처리
+            cursor.execute("SELECT * FROM contents WHERE id = %s", (content_id,))
+            content = cursor.fetchone()
+            cursor.execute("SELECT id, name FROM subjects ORDER BY name ASC")
+            subjects = cursor.fetchall()
             return render_template('edit_content.html', content=content, subjects=subjects)
 
     except Exception as e:
@@ -1150,9 +1168,14 @@ def admin_dashboard():
 
     return render_template('admin_dashboard.html', username=session['username'])
 
+def allowed_pdf_file(filename):
+    """PDF 파일 확장자만 허용하는지 확인하는 헬퍼 함수"""
+    return '.' in filename and \
+           filename.rsplit('.', 1)[1].lower() in {'pdf'}
+
 @app.route('/admin/add_content', methods=['GET', 'POST'])
 def add_content():
-    """새로운 학습 콘텐츠를 등록하는 페이지 및 처리"""
+    """새로운 학습 콘텐츠를 등록하는 페이지 및 처리 (PDF 업로드 기능 추가)"""
     if not is_admin():
         flash('접근 권한이 없습니다.', 'error')
         return redirect(url_for('index'))
@@ -1162,25 +1185,46 @@ def add_content():
         conn = get_db_connection()
         with conn.cursor() as cursor:
             if request.method == 'POST':
+                storage_type = request.form.get('storage_type')
                 subject_id = request.form.get('subject_id')
                 content_type = request.form.get('content_type')
                 title = request.form.get('title', '').strip()
-                body = request.form.get('body', '').strip()
 
-                if not all([subject_id, content_type, title, body]):
-                    flash('모든 필드를 채워주세요.', 'error')
-                    # 오류 발생 시에도 과목 목록을 다시 불러와 템플릿 렌더링
-                    cursor.execute("SELECT id, name FROM subjects ORDER BY name ASC")
-                    subjects = cursor.fetchall()
-                    return render_template('add_content.html', subjects=subjects)
+                body = None
+                pdf_path = None
 
-                sql = "INSERT INTO contents (subject_id, content_type, title, body) VALUES (%s, %s, %s, %s)"
-                cursor.execute(sql, (subject_id, content_type, title, body))
-                conn.commit()
-                flash('새로운 콘텐츠가 성공적으로 등록되었습니다.', 'success')
-                return redirect(url_for('manage_content'))
+                if storage_type == 'editor':
+                    body = request.form.get('body', '').strip()
+                    if not all([subject_id, content_type, title, body]):
+                        flash('모든 필드를 채워주세요.', 'error')
+                    else:
+                        sql = "INSERT INTO contents (subject_id, content_type, storage_type, title, body) VALUES (%s, %s, %s, %s, %s)"
+                        cursor.execute(sql, (subject_id, content_type, storage_type, title, body))
+                        conn.commit()
+                        flash('새로운 콘텐츠가 성공적으로 등록되었습니다.', 'success')
+                        return redirect(url_for('manage_content'))
 
-            # GET 요청 처리
+                elif storage_type == 'pdf':
+                    if 'pdf_file' not in request.files or request.files['pdf_file'].filename == '':
+                        flash('PDF 파일을 선택해주세요.', 'error')
+                    else:
+                        file = request.files['pdf_file']
+                        if file and allowed_pdf_file(file.filename):
+                            filename = secure_filename(file.filename)
+                            unique_filename = f"{uuid.uuid4()}_{filename}"
+                            save_path = os.path.join(app.root_path, 'static/pdfs', unique_filename)
+                            file.save(save_path)
+                            pdf_path = f"pdfs/{unique_filename}"
+
+                            sql = "INSERT INTO contents (subject_id, content_type, storage_type, title, pdf_path) VALUES (%s, %s, %s, %s, %s)"
+                            cursor.execute(sql, (subject_id, content_type, storage_type, title, pdf_path))
+                            conn.commit()
+                            flash('PDF 콘텐츠가 성공적으로 등록되었습니다.', 'success')
+                            return redirect(url_for('manage_content'))
+                        else:
+                            flash('PDF 파일만 업로드할 수 있습니다.', 'error')
+
+            # GET 요청 또는 POST 오류 시 과목 목록을 불러와 폼 렌더링
             cursor.execute("SELECT id, name FROM subjects ORDER BY name ASC")
             subjects = cursor.fetchall()
             return render_template('add_content.html', subjects=subjects)

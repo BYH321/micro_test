@@ -61,9 +61,6 @@
         <label for="pdf_file">PDF 파일:</label>
         <p>현재 파일: {{ content.pdf_path.split('_')[-1] if content.pdf_path else '없음' }} (새 파일을 업로드하면 덮어씁니다)</p>
         <input type="file" id="pdf_file" name="pdf_file" accept=".pdf">
-        <div>
-            <label><input type="checkbox" name="allow_download" value="1" {% if content.allow_download %}checked{% endif %}> PDF 파일 다운로드 허용</label>
-        </div>
     </div>
 
     <div class="form-actions">

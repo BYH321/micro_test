@@ -1175,7 +1175,7 @@ def allowed_pdf_file(filename):
 
 @app.route('/admin/add_content', methods=['GET', 'POST'])
 def add_content():
-    """새로운 학습 콘텐츠를 등록하는 페이지 및 처리 (PDF 업로드 기능 추가)"""
+    """새로운 학습 콘텐츠를 등록하는 페이지 및 처리"""
     if not is_admin():
         flash('접근 권한이 없습니다.', 'error')
         return redirect(url_for('index'))
@@ -1184,26 +1184,27 @@ def add_content():
     try:
         conn = get_db_connection()
         with conn.cursor() as cursor:
+            # GET과 POST 모두에서 과목 목록이 필요하므로 먼저 불러옵니다.
+            cursor.execute("SELECT id, name FROM subjects ORDER BY name ASC")
+            subjects = cursor.fetchall()
+
             if request.method == 'POST':
-                # ★★★ 수정된 부분: 모든 form 값을 .get()으로 안전하게 받도록 변경 ★★★
                 storage_type = request.form.get('storage_type')
                 subject_id = request.form.get('subject_id')
                 content_type = request.form.get('content_type')
                 title = request.form.get('title', '').strip()
 
-                body = None
-                pdf_path = None
-
-                # 폼 데이터 유효성 검사 강화
+                # 기본 유효성 검사
                 if not all([storage_type, subject_id, content_type, title]):
                     flash('저장 방식, 과목, 타입, 제목은 필수 항목입니다.', 'error')
+                    return render_template('add_content.html', subjects=subjects)
 
-                elif storage_type == 'editor':
+                if storage_type == 'editor':
                     body = request.form.get('body', '').strip()
                     if not body:
                         flash('에디터 내용을 입력해주세요.', 'error')
                     else:
-                        sql = "INSERT INTO contents (subject_id, content_type, storage_type, title, body, pdf_path) VALUES (%s, %s, %s, %s, %s, NULL)"
+                        sql = "INSERT INTO contents (subject_id, content_type, storage_type, title, body, pdf_path, is_active) VALUES (%s, %s, %s, %s, %s, NULL, 1)"
                         cursor.execute(sql, (subject_id, content_type, storage_type, title, body))
                         conn.commit()
                         flash('새로운 콘텐츠가 성공적으로 등록되었습니다.', 'success')
@@ -1221,7 +1222,7 @@ def add_content():
                             file.save(save_path)
                             pdf_path = f"pdfs/{unique_filename}"
 
-                            sql = "INSERT INTO contents (subject_id, content_type, storage_type, title, body, pdf_path) VALUES (%s, %s, %s, %s, NULL, %s)"
+                            sql = "INSERT INTO contents (subject_id, content_type, storage_type, title, body, pdf_path, is_active) VALUES (%s, %s, %s, %s, NULL, %s, 1)"
                             cursor.execute(sql, (subject_id, content_type, storage_type, title, pdf_path))
                             conn.commit()
                             flash('PDF 콘텐츠가 성공적으로 등록되었습니다.', 'success')
@@ -1229,9 +1230,10 @@ def add_content():
                         else:
                             flash('PDF 파일만 업로드할 수 있습니다.', 'error')
 
-            # GET 요청 또는 POST 오류 시 과목 목록을 불러와 폼 렌더링
-            cursor.execute("SELECT id, name FROM subjects ORDER BY name ASC")
-            subjects = cursor.fetchall()
+                # POST 요청 처리 중 유효성 검사에 실패한 경우, 폼을 다시 보여줍니다.
+                return render_template('add_content.html', subjects=subjects)
+
+            # GET 요청 처리
             return render_template('add_content.html', subjects=subjects)
 
     except Exception as e:

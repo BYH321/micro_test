@@ -1194,7 +1194,6 @@ def add_content():
                 content_type = request.form.get('content_type')
                 title = request.form.get('title', '').strip()
 
-                # 기본 유효성 검사
                 if not all([storage_type, subject_id, content_type, title]):
                     flash('저장 방식, 과목, 타입, 제목은 필수 항목입니다.', 'error')
                     return render_template('add_content.html', subjects=subjects)
@@ -1203,35 +1202,32 @@ def add_content():
                     body = request.form.get('body', '').strip()
                     if not body:
                         flash('에디터 내용을 입력해주세요.', 'error')
-                    else:
-                        sql = "INSERT INTO contents (subject_id, content_type, storage_type, title, body, pdf_path, is_active) VALUES (%s, %s, %s, %s, %s, NULL, 1)"
-                        cursor.execute(sql, (subject_id, content_type, storage_type, title, body))
-                        conn.commit()
-                        flash('새로운 콘텐츠가 성공적으로 등록되었습니다.', 'success')
-                        return redirect(url_for('manage_content'))
+                        return render_template('add_content.html', subjects=subjects)
+
+                    sql = "INSERT INTO contents (subject_id, content_type, storage_type, title, body, is_active) VALUES (%s, %s, %s, %s, %s, 1)"
+                    cursor.execute(sql, (subject_id, content_type, storage_type, title, body))
 
                 elif storage_type == 'pdf':
                     if 'pdf_file' not in request.files or request.files['pdf_file'].filename == '':
                         flash('PDF 파일을 선택해주세요.', 'error')
-                    else:
-                        file = request.files['pdf_file']
-                        if file and allowed_pdf_file(file.filename):
-                            filename = secure_filename(file.filename)
-                            unique_filename = f"{uuid.uuid4()}_{filename}"
-                            save_path = os.path.join(app.root_path, 'static/pdfs', unique_filename)
-                            file.save(save_path)
-                            pdf_path = f"pdfs/{unique_filename}"
+                        return render_template('add_content.html', subjects=subjects)
 
-                            sql = "INSERT INTO contents (subject_id, content_type, storage_type, title, body, pdf_path, is_active) VALUES (%s, %s, %s, %s, NULL, %s, 1)"
-                            cursor.execute(sql, (subject_id, content_type, storage_type, title, pdf_path))
-                            conn.commit()
-                            flash('PDF 콘텐츠가 성공적으로 등록되었습니다.', 'success')
-                            return redirect(url_for('manage_content'))
-                        else:
-                            flash('PDF 파일만 업로드할 수 있습니다.', 'error')
+                    file = request.files['pdf_file']
+                    if not (file and allowed_pdf_file(file.filename)):
+                        flash('PDF 파일만 업로드할 수 있습니다.', 'error')
+                        return render_template('add_content.html', subjects=subjects)
 
-                # POST 요청 처리 중 유효성 검사에 실패한 경우, 폼을 다시 보여줍니다.
-                return render_template('add_content.html', subjects=subjects)
+                    filename = secure_filename(file.filename)
+                    unique_filename = f"{uuid.uuid4()}_{filename}"
+                    save_path = os.path.join(app.root_path, 'static/pdfs', unique_filename)
+                    file.save(save_path)
+                    pdf_path = f"pdfs/{unique_filename}"
+                    sql = "INSERT INTO contents (subject_id, content_type, storage_type, title, pdf_path, is_active) VALUES (%s, %s, %s, %s, %s, 1)"
+                    cursor.execute(sql, (subject_id, content_type, storage_type, title, pdf_path))
+
+                conn.commit()
+                flash('새로운 콘텐츠가 성공적으로 등록되었습니다.', 'success')
+                return redirect(url_for('manage_content'))
 
             # GET 요청 처리
             return render_template('add_content.html', subjects=subjects)

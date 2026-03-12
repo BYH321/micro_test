@@ -14,7 +14,7 @@ spec:
   spec:
    containers:
    - name: flask-app
-     image: byh321/flask-app:b218b080874d776d6834a1402dea4fb27bd13b00
+     image: byh321/flask-app:aedca25553182381449e96bd680491beb3856d83
      ports:
      - containerPort: 5000
 ---

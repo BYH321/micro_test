@@ -1339,6 +1339,6 @@ def delete_subject(subject_id):
 
 # 개발용 블록입니다. Apache/mod_wsgi로 배포 시에는 사용되지 않습니다.
 if __name__ == '__main__':
-    app.run(debug=True, host='0.0.0.0')
+    app.run(debug=True, host='0.0.0.0', port=5000)
 
 
